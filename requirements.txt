@@ -1,0 +1,38 @@
+# --- Core web & API ---
+fastapi
+uvicorn[standard]
+
+# --- Pydantic & PydanticAI (for RAG agent) ---
+pydantic>=2.0
+pydantic-ai
+
+# --- LLM provider (Gemini) ---
+google-generativeai
+
+# --- Vector database ---
+lancedb
+
+# --- Data handling ---
+pandas
+numpy
+
+# --- Web UI for chat ---
+streamlit
+
+# --- Config & utilities ---
+python-dotenv
+requests
+httpx
+rich
+
+# --- Azure Functions (serverless API) ---
+azure-functions
+
+# --- Testing ---
+pytest
+pytest-asyncio
+
+# --- Dev tooling (optional but pro) ---
+black
+isort
+mypy
