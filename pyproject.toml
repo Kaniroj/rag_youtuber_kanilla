@@ -4,4 +4,9 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "google-generativeai>=0.8.5",
+    "lancedb>=0.25.3",
+    "pandas>=2.3.3",
+    "pydantic-settings>=2.12.0",
+]
