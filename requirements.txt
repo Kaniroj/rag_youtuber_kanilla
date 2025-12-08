@@ -36,3 +36,14 @@ pytest-asyncio
 black
 isort
 mypy
+fastapi
+uvicorn[standard]
+streamlit
+google-generativeai
+pydantic
+pydantic-ai
+requests
+lancedb
+numpy
+pandas
+azure-functions
