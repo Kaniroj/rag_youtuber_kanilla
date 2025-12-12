@@ -239,3 +239,6 @@ obj/
 .localsettings.json
 
 .python_packages
+.env
+*.env
+.venv/

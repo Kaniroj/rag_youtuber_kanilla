@@ -10,3 +10,9 @@ httpx
 python-dotenv
 rich
 azure-functions
+uvicorn
+pypdf
+streamlit
+ipykernel
+
+

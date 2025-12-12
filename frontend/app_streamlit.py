@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+import os
+
 import requests
 import streamlit as st
 
-API_URL = "https://kani-function-app987654.azurewebsites.net/api/chat"
+API_BASE_URL = "https://datatalks-ai-function.azurewebsites.net"
+API_URL = f"{API_BASE_URL}/api/chat"
+
+
+
 
 # لیست زبان‌ها: کد، اسم نمایشی
 LANGUAGES = [
