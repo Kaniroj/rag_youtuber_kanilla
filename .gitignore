@@ -217,7 +217,6 @@ env/
 venv/
 
 # VS Code
-.vscode/
 
 # Data & DB
 db/
@@ -238,3 +237,5 @@ data/lancedb/
 bin/
 obj/
 .localsettings.json
+
+.python_packages

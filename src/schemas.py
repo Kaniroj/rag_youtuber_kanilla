@@ -1,15 +1,22 @@
+# src/schemas.py
 from __future__ import annotations
 
-from typing import List
-
+from typing import List, Literal
 from pydantic import BaseModel
 
 
+class Source(BaseModel):
+    video_id: str
+    chunk_index: int
+    text: str
+
+
+class RagAnswer(BaseModel):
+    answer: str
+    sources: List[Source]
+
+
 class ChatRequest(BaseModel):
-    """مدلی برای درخواست چت از سمت کلاینت (فرانت‌اند)."""
-
     question: str
-
-
-# توجه: برای پاسخ، مستقیم از RagAnswer که در rag_engine تعریف کردیم استفاده می‌کنیم.
-# نیازی به تعریف مدل تکراری نیست.
+    # سه زبان مجاز
+    language: Literal["sv", "en", "fa"] = "sv"
