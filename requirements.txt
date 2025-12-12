@@ -1,49 +1,12 @@
-# --- Core web & API ---
 fastapi
-uvicorn[standard]
-
-# --- Pydantic & PydanticAI (for RAG agent) ---
 pydantic>=2.0
 pydantic-ai
-
-# --- LLM provider (Gemini) ---
 google-generativeai
-
-# --- Vector database ---
 lancedb
-
-# --- Data handling ---
-pandas
 numpy
-
-# --- Web UI for chat ---
-streamlit
-
-# --- Config & utilities ---
-python-dotenv
+pandas
 requests
 httpx
+python-dotenv
 rich
-
-# --- Azure Functions (serverless API) ---
-azure-functions
-
-# --- Testing ---
-pytest
-pytest-asyncio
-
-# --- Dev tooling (optional but pro) ---
-black
-isort
-mypy
-fastapi
-uvicorn[standard]
-streamlit
-google-generativeai
-pydantic
-pydantic-ai
-requests
-lancedb
-numpy
-pandas
 azure-functions
