@@ -1,121 +1,203 @@
 from __future__ import annotations
 
-import os
-
 import requests
 import streamlit as st
 
 API_BASE_URL = "https://datatalks-ai-function.azurewebsites.net"
 API_URL = f"{API_BASE_URL}/api/chat"
 
+LANGUAGES = [("sv", "Svenska"), ("en", "English"), ("fa", "فارسی")]
 
+st.set_page_config(page_title="RAG Chat (Azure)", page_icon="🤖", layout="wide")
 
-
-# لیست زبان‌ها: کد، اسم نمایشی
-LANGUAGES = [
-    ("sv", "Svenska"),
-    ("en", "English"),
-    ("fa", "فارسی"),
-]
-
-st.set_page_config(page_title="Kokchun RAG Chatbot", page_icon="🤖")
-
-# انتخاب زبان در سایدبار
+# ---------- State ----------
 if "language" not in st.session_state:
-    st.session_state.language = "sv"  # پیش‌فرض: سوئدی
+    st.session_state.language = "sv"
 
-selected_lang = st.sidebar.selectbox(
-    "Language / Språk / زبان",
-    options=LANGUAGES,
-    format_func=lambda x: x[1],  # فقط اسم قشنگ را نشان بده
-)
-
-# کد زبان (sv/en/fa) را در session نگه می‌داریم
-st.session_state.language = selected_lang[0]
-current_lang = st.session_state.language
-
-# متن‌های UI بر اساس زبان
-if current_lang == "sv":
-    TITLE = "🤖 Kokchun RAG Chatbot"
-    DESCRIPTION = "Med denna chatbot kan du ställa frågor om innehållet i Kokchuns kurs."
-    INPUT_PLACEHOLDER = "Skriv din fråga här..."
-    SOURCES_LABEL = "🔍 Källor som användes i svaret"
-    NO_SOURCES = "Inga specifika källor rapporterades."
-    ERROR_PREFIX = "❌ Fel vid anslutning till API:"
-elif current_lang == "fa":
-    TITLE = "🤖 چت‌بات Kokchun RAG"
-    DESCRIPTION = "با این چت‌بات می‌تونی دربارهٔ محتوای دوره‌ی کوکچون سؤال بپرسی."
-    INPUT_PLACEHOLDER = "سؤالت را اینجا بنویس..."
-    SOURCES_LABEL = "🔍 منابع استفاده‌شده در پاسخ"
-    NO_SOURCES = "هیچ منبع مشخصی گزارش نشد."
-    ERROR_PREFIX = "❌ خطا در ارتباط با API:"
-else:  # en
-    TITLE = "🤖 Kokchun RAG Chatbot"
-    DESCRIPTION = "With this chatbot you can ask questions about Kokchun's course content."
-    INPUT_PLACEHOLDER = "Type your question here..."
-    SOURCES_LABEL = "🔍 Sources used in the answer"
-    NO_SOURCES = "No specific sources were reported."
-    ERROR_PREFIX = "❌ Error when connecting to API:"
-
-# عنوان و توضیح صفحه
-st.title(TITLE)
-st.write(DESCRIPTION)
-
-# نگه‌داشتن تاریخچه‌ی چت در session
 if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []  # [{"role": "user" / "assistant", "content": str}]
+    st.session_state.chat_history = []  # [{role, content}]
 
-# نمایش تاریخچه
-for msg in st.session_state.chat_history:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+if "latest_sources" not in st.session_state:
+    st.session_state.latest_sources = []  # list of sources from last answer
 
-# ورودی کاربر (چت اینترفیسی)
-question = st.chat_input(INPUT_PLACEHOLDER)
+if "dark" not in st.session_state:
+    st.session_state.dark = False
 
-if question:
-    # ذخیره و نمایش سوال کاربر
-    st.session_state.chat_history.append({"role": "user", "content": question})
-    with st.chat_message("user"):
-        st.markdown(question)
+# ---------- Simple theme CSS ----------
+def inject_css(dark: bool) -> None:
+    if dark:
+        bg = "#0b1220"
+        card = "#0f172a"
+        border = "#22304a"
+        text = "#e5e7eb"
+        muted = "#9ca3af"
+    else:
+        bg = "#f6f8fb"
+        card = "#ffffff"
+        border = "#e6eaf2"
+        text = "#0f172a"
+        muted = "#6b7280"
 
-    # فرستادن سوال و زبان به API
-    try:
-        response = requests.post(
-            API_URL,
-            json={
-                "question": question,
-                "language": current_lang,  # 👈 مهم
-            },
-            timeout=60,
-        )
-        response.raise_for_status()
-        data = response.json()
-        answer = data.get("answer", "")
+    st.markdown(
+        f"""
+        <style>
+          .stApp {{
+            background: {bg};
+          }}
+          .kani-card {{
+            background: {card};
+            border: 1px solid {border};
+            border-radius: 16px;
+            padding: 16px 18px;
+            color: {text};
+          }}
+          .kani-muted {{
+            color: {muted};
+            font-size: 0.9rem;
+          }}
+          .kani-title {{
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin: 0;
+          }}
+          .kani-sub {{
+            margin-top: 4px;
+            margin-bottom: 0;
+          }}
+          /* Make chat area feel roomy */
+          section.main > div {{
+            padding-top: 1.2rem;
+          }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
-        # نمایش پاسخ
-        with st.chat_message("assistant"):
-            st.markdown(answer)
+inject_css(st.session_state.dark)
 
-        st.session_state.chat_history.append(
-            {"role": "assistant", "content": answer}
-        )
+# ---------- Header ----------
+top_left, top_right = st.columns([0.75, 0.25], vertical_alignment="center")
 
-        # نمایش منابع
-        with st.expander(SOURCES_LABEL):
-            sources = data.get("sources", [])
-            if not sources:
-                st.write(NO_SOURCES)
-            else:
-                for src in sources:
-                    st.write(
-                        f"- **{src.get('video_id', '')}** – chunk #{src.get('chunk_index', '')}"
-                    )
+with top_left:
+    st.markdown(
+        """
+        <div class="kani-card">
+          <div style="display:flex; gap:14px; align-items:center;">
+            <div style="width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#22c1c3,#7f53ac);display:flex;align-items:center;justify-content:center;font-weight:900;color:white;">
+              R
+            </div>
+            <div>
+              <p class="kani-title">RAG Chat (Azure)</p>
+              <p class="kani-sub kani-muted">Retrieval Augmented Generation • <a href="/docs" target="_blank">Open API docs</a></p>
+            </div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    except requests.RequestException as e:
-        error_msg = f"{ERROR_PREFIX} {e}"
-        with st.chat_message("assistant"):
-            st.markdown(error_msg)
-        st.session_state.chat_history.append(
-            {"role": "assistant", "content": error_msg}
-        )
+with top_right:
+    c1, c2 = st.columns(2)
+    with c1:
+        st.session_state.dark = st.toggle("Theme", value=st.session_state.dark)
+    with c2:
+        if st.button("Clear", use_container_width=True):
+            st.session_state.chat_history = []
+            st.session_state.latest_sources = []
+            st.rerun()
+
+# Re-inject CSS if theme changed
+inject_css(st.session_state.dark)
+
+# ---------- Main layout ----------
+left, right = st.columns([0.62, 0.38], gap="large")
+
+# ----- Left: chat -----
+with left:
+    st.markdown('<div class="kani-card">', unsafe_allow_html=True)
+    st.subheader("Chat")
+
+    lang = st.selectbox(
+        "Language",
+        options=LANGUAGES,
+        format_func=lambda x: x[1],
+        index=[i for i, x in enumerate(LANGUAGES) if x[0] == st.session_state.language][0],
+    )
+    st.session_state.language = lang[0]
+    current_lang = st.session_state.language
+
+    st.markdown('<p class="kani-muted">Sources visas till höger (kortade). Backend är optimerad för lägre kostnad.</p>', unsafe_allow_html=True)
+
+    # render history
+    for msg in st.session_state.chat_history:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    question = st.chat_input("Skriv din fråga här...")
+
+    if question:
+        st.session_state.chat_history.append({"role": "user", "content": question})
+        with st.chat_message("user"):
+            st.markdown(question)
+
+        try:
+            resp = requests.post(
+                API_URL,
+                json={"question": question, "language": current_lang},
+                timeout=90,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+
+            answer = data.get("answer", "")
+            sources = data.get("sources", []) or []
+            st.session_state.latest_sources = sources
+
+            with st.chat_message("assistant"):
+                st.markdown(answer)
+
+            st.session_state.chat_history.append({"role": "assistant", "content": answer})
+
+        except requests.RequestException as e:
+            err = f"❌ Fel vid anslutning till API: {e}"
+            with st.chat_message("assistant"):
+                st.markdown(err)
+            st.session_state.chat_history.append({"role": "assistant", "content": err})
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ----- Right: latest sources -----
+with right:
+    st.markdown('<div class="kani-card">', unsafe_allow_html=True)
+    header_row = st.columns([0.75, 0.25], vertical_alignment="center")
+    with header_row[0]:
+        st.subheader("Latest sources")
+    with header_row[1]:
+        mode = st.selectbox(" ", options=["short", "full"], label_visibility="collapsed", index=0)
+
+    sources = st.session_state.latest_sources or []
+
+    def short_text(t: str, n: int = 220) -> str:
+        t = (t or "").strip()
+        if len(t) <= n:
+            return t
+        cut = t[:n]
+        last_space = cut.rfind(" ")
+        return (cut[:last_space] if last_space > 120 else cut) + "…"
+
+    if not sources:
+        st.markdown('<p class="kani-muted">Inga källor ännu. Ställ en fråga så dyker de upp här.</p>', unsafe_allow_html=True)
+    else:
+        # show as JSON-like
+        rendered = []
+        for s in sources:
+            rendered.append(
+                {
+                    "video_id": s.get("video_id", ""),
+                    "chunk_index": s.get("chunk_index", ""),
+                    "text": short_text(s.get("text", "")) if mode == "short" else (s.get("text", "") or ""),
+                }
+            )
+        st.json(rendered)
+
+    st.markdown("</div>", unsafe_allow_html=True)
