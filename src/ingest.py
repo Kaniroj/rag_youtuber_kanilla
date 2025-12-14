@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import List, Dict
+from typing import Dict, List
 
 import lancedb
 from google import genai
@@ -26,28 +26,50 @@ def chunk_text(text: str, chunk_size: int = 1200, overlap: int = 200) -> List[st
 
     while start < n:
         end = min(start + chunk_size, n)
-        chunks.append(text[start:end].strip())
+        chunk = text[start:end].strip()
+        if chunk:
+            chunks.append(chunk)
+
         if end == n:
             break
+
         start = max(0, end - overlap)
 
-    return [c for c in chunks if c]
+    return chunks
 
 
 # ---------- Embeddings ----------
+def _extract_embedding_values(resp) -> List[float]:
+    """
+    google-genai kan returnera embedding i lite olika format beroende på version.
+    Vi försöker hantera de vanligaste.
+    """
+    # Vanligt: resp.embedding.values
+    if hasattr(resp, "embedding") and hasattr(resp.embedding, "values"):
+        return list(resp.embedding.values)
+
+    # Ibland: resp.embeddings[0].values
+    if hasattr(resp, "embeddings") and resp.embeddings:
+        emb0 = resp.embeddings[0]
+        if hasattr(emb0, "values"):
+            return list(emb0.values)
+
+    raise ValueError(f"Kunde inte hitta embedding values i responsen: {type(resp)}")
+
+
 def embed_texts(client: genai.Client, texts: List[str]) -> List[List[float]]:
     """
     Skapar embeddings en och en (säkert).
-    Om du vill snabba upp senare kan vi batcha.
     """
     embeddings: List[List[float]] = []
+
     for t in texts:
         resp = client.models.embed_content(
-            model="models/embedding-gecko-001",
-            contents=t,
+            model="models/text-embedding-004",
+            contents=t,  # ✅ här ska det vara texten, inte 'chunks'
         )
-        # resp.embedding.values är standard-format i genai
-        embeddings.append(list(resp.embedding.values))
+        embeddings.append(_extract_embedding_values(resp))
+
     return embeddings
 
 
@@ -56,12 +78,10 @@ def get_table():
     Path(settings.lancedb_dir).mkdir(parents=True, exist_ok=True)
     db = lancedb.connect(settings.lancedb_dir)
 
-    # Om tabellen inte finns: skapa med ert schema via första insert (LanceDB kan infer).
-    # Men ni har redan tabell + schema, så öppna bara:
     try:
         table = db.open_table(settings.lancedb_table)
     except Exception:
-        # fallback: skapa tom tabell med minimal schema-liknande kolumner
+        # Fallback: skapa en tom tabell med ett init-row och ta bort den direkt
         table = db.create_table(
             settings.lancedb_table,
             data=[
@@ -70,7 +90,7 @@ def get_table():
                     "video_id": "init",
                     "chunk_index": 0,
                     "text": "init",
-                    "embedding": [0.0] * 768,
+                    "embedding": [0.0] * 768,  # OBS: måste matcha embedding-dim i din tabell
                 }
             ],
             mode="overwrite",
@@ -93,7 +113,7 @@ def ingest_folder(
         return
 
     for file in files:
-        video_id = file.stem  # ex: "video_10" eller själva YouTube-id om ni döper så
+        video_id = file.stem  # ex: "video_10" eller YouTube-id om ni döper så
         text = file.read_text(encoding="utf-8", errors="ignore")
 
         chunks = chunk_text(text, chunk_size=1200, overlap=200)
@@ -120,14 +140,10 @@ def ingest_folder(
 
         table.add(rows)
 
-        # Lite debug-info
         print(f"[OK] {file.name}: {len(rows)} chunks -> tabell '{settings.lancedb_table}'")
 
 
 if __name__ == "__main__":
-    # Var ni har era transkript:
-    # Alternativ 1: sätt env var TRANSCRIPTS_DIR
-    # Alternativ 2: hårdkoda en rimlig default
     transcripts_dir = Path(os.getenv("TRANSCRIPTS_DIR", "data/transcripts"))
 
     table = get_table()

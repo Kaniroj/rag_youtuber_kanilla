@@ -12,8 +12,8 @@ from fastapi.responses import HTMLResponse
 from src.history_store import append as hist_append
 from src.history_store import clear as hist_clear
 from src.history_store import get as hist_get
-from src.rag_engine import RagAnswer, answer_question
-from src.schemas import ChatRequest
+from src.rag_engine import answer_question
+from src.schemas import RagAnswer, ChatRequest
 from src.video_mvp import make_youtube_description, make_youtube_tags
 
 # -------------------------------------------------
@@ -239,13 +239,11 @@ window.addEventListener("load", loadHistoryFromApi);
 </html>
 """
 
-
 # -----------------------------
 # Base endpoints
 # -----------------------------
 @app.get("/")
 def root() -> dict:
-    # Stabil root för Azure + snabb check
     return {"status": "ok", "service": "rag-youtuber", "docs": "/docs", "ui": "/ui"}
 
 
@@ -254,6 +252,13 @@ async def ui() -> str:
     return CHAT_HTML
 
 
+# Kort health (för snabb test)
+@app.get("/health")
+async def health() -> dict:
+    return {"status": "ok"}
+
+
+# API health (för Azure / monitoring)
 @app.get("/api/health")
 async def health_check() -> dict:
     return {"status": "ok", "build": "cost-optimized-2025-12-12"}
