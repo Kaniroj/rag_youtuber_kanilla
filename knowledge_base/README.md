@@ -158,7 +158,7 @@ The full pipeline works end‑to‑end (request reaches Gemini)
 
 Screenshot
 
-Add screenshot here showing:
+💯💯💯![alt text](image-9.png)
 
 /rag/query returning 429 quota error
 

@@ -1,32 +1,51 @@
 import streamlit as st
 import requests
-from pathlib import Path
 
-ASSETS_PATH = Path(__file__).absolute().parents[1] / "assets"
+API_URL = "http://127.0.0.1:8000/rag/query"
+# اگر Azure Functions:
+# API_URL = "http://localhost:7071/rag/query"
+
 
 def layout():
+    st.title("🤓 Ask the Data Engineering Youtuber")
+    st.write("Ask a question about the YouTuber's data engineering courses.")
 
-    st.markdown("# ask me")
-    st.markdown("Ask a question about data courses")
-    text_input = st.text_input(label="Ask a questions")
+    question = st.text_input("Your question:")
 
-    if st.button("Send") and text_input.strip() != "":
-        response = requests.post(
-            "http://127.0.0.1:8000/rag/query", json={"prompt": text_input}
-        )
+    if st.button("Send") and question.strip():
+        with st.spinner("Thinking..."):
+            try:
+                response = requests.post(
+                    API_URL,
+                    json={"prompt": question},
+                    timeout=60,
+                )
 
-        data = response.json()
+                if response.status_code != 200:
+                    st.error(f"API error: {response.status_code}")
+                    st.code(response.text)
+                    return
 
-        st.markdown("## Question:")
-        st.markdown(text_input)
+                data = response.json()
 
-        st.markdown("## Answer:")
-        st.markdown(data["answer"])
+                st.subheader("Question")
+                st.write(question)
 
-        st.markdown("## Source:")
-        st.markdown(data["filepath"])
- 
-        st.image(ASSETS_PATH / f"{data['filename']}.png")
+                st.subheader("Answer")
+                st.write(data.get("answer", "No answer returned"))
+
+                sources = data.get("sources", [])
+                if sources:
+                    st.subheader("Sources")
+                    for s in sources:
+                        st.write(
+                            f"- {s['source_file']} (chunk {s['chunk_index']})"
+                        )
+
+            except Exception as e:
+                st.error("Request failed")
+                st.exception(e)
+
 
 if __name__ == "__main__":
     layout()
