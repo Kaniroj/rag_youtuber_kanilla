@@ -1,12 +1,23 @@
 import azure.functions as func
-from src.api import app as fastapi_app
+from azure.functions import AsgiMiddleware
 
+# FastAPI app شما
+from knowledge_base.api import app as fastapi_app
+
+
+# Azure Function App
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
 
-
-@app.route(route="{*route}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+@app.route(
+    route="{*path}",
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+)
 async def fastapi_proxy(
-    req: func.HttpRequest, context: func.Context
+    req: func.HttpRequest,
+    context: func.Context,
 ) -> func.HttpResponse:
-    return await func.AsgiMiddleware(fastapi_app).handle_async(req, context)
+    """
+    Proxy all HTTP requests to the FastAPI application.
+    """
+    return await AsgiMiddleware(fastapi_app).handle_async(req, context)
