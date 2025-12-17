@@ -1,37 +1,9 @@
-# Core project dependencies
-fastapi
-uvicorn[standard]
+from fastapi.testclient import TestClient
+from backend.main import app
 
-pydantic
-pydantic-ai
 
-# LLM provider (Gemini)
-google-generativeai
+client = TestClient(app)
 
-# Vector database
-lancedb
-
-# Data handling
-pandas
-numpy
-
-# Web UI
-streamlit
-
-# Config & utilities
-python-dotenv
-requests
-httpx
-rich
-
-# Azure Functions (serverless API)
-azure-functions
-
-# Testing
-pytest
-pytest-asyncio
-
-# Optional: for type checking & dev quality
-mypy
-black
-isort
+def test_health():
+    response = client.get("/health")
+    assert response.status_code == 200

@@ -1,4 +1,5 @@
-from src.ingest import chunk_text
+from backend.ingest import chunk_text
+
 
 
 def test_chunk_text_basic():
