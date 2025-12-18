@@ -29,4 +29,9 @@ class Settings(BaseSettings):
     chat_model: str = "gemini-2.0-flash"
 
 
+
+
+    #chat_model: str = "gemini-2.0-flash"
+
+
 settings = Settings()

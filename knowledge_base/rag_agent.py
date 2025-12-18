@@ -4,6 +4,7 @@ from typing import List
 
 from pydantic_ai import Agent
 from pydantic_ai.models.gemini import GeminiModel
+from pydantic_ai.providers.google_gla import GoogleGLAProvider
 
 from backend.config import settings
 from knowledge_base.retriever import retrieve, format_context, RetrievedChunk
@@ -18,8 +19,11 @@ Always cite sources in the format: (source_file, chunk_index).
 """.strip()
 
 
-# GeminiModel reads API key from env (GEMINI_API_KEY)
-model = GeminiModel(settings.chat_model)
+# ✅ Correct Gemini setup
+model = GeminiModel(
+    settings.chat_model,
+    provider=GoogleGLAProvider(api_key=settings.gemini_api_key),
+)
 
 agent = Agent(
     model=model,
@@ -28,14 +32,19 @@ agent = Agent(
 
 
 async def answer_question(question: str, k: int = 5) -> str:
+    # 1. Retrieve chunks
     chunks: List[RetrievedChunk] = retrieve(question, k=k)
+
+    # 2. Build context
     context = format_context(chunks)
 
+    # 3. Sources
     sources_text = "\n".join(
         f"- ({c.source_file}, chunk {c.chunk_index})"
         for c in chunks
     )
 
+    # 4. Prompt
     prompt = f"""
 TRANSCRIPT CONTEXT:
 {context}
@@ -48,5 +57,8 @@ At the end of your answer, include a section called "Sources" and list:
 {sources_text}
 """.strip()
 
+    # 5. Run agent
     result = await agent.run(prompt)
-    return result.data  # plain text answer
+
+    # ✅ THIS IS THE FIX
+    return result.output

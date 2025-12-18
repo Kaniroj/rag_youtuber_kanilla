@@ -1,3 +1,5 @@
+
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
@@ -27,5 +29,4 @@ async def query_documentation(query: Prompt):
         answer = await answer_question(query.prompt, k=5)
         return {"answer": answer}
     except Exception as e:
-        # t.ex. quota error
         raise HTTPException(status_code=500, detail=str(e))
