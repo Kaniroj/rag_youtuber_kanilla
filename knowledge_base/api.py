@@ -1,5 +1,3 @@
-
-
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
@@ -13,6 +11,15 @@ app = FastAPI(
 
 class Prompt(BaseModel):
     prompt: str
+
+
+@app.get("/")
+async def root():
+    return {
+        "status": "ok",
+        "message": "RAG Youtuber API is running",
+        "docs": "/docs"
+    }
 
 
 @app.get("/test")
