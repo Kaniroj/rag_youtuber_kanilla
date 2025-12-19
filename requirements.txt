@@ -14,5 +14,8 @@ uvicorn
 pypdf
 streamlit
 ipykernel
+streamlit
+requests
+
 
 

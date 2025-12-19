@@ -1,14 +1,18 @@
 import streamlit as st
 import requests
-
+import os
+from dotenv import load_dotenv
+ 
+load_dotenv()
 API_URL = "http://127.0.0.1:8000/rag/query"
 # اگر Azure Functions:
-# API_URL = "http://localhost:7071/rag/query"
+
+#API_URL = f"https://kanilla-azure.azurewebsites.net/rag/query?code={os.getenv('FUNCTION_CODE')}"
 
 
 def layout():
-    st.title("🤓 Ask the Data Engineering Youtuber")
-    st.write("Ask a question about the YouTuber's data engineering courses.")
+    st.title("🤓 Experimental Data Engineering — if it breaks, it was the data’s fault")
+    st.write("Ask here — we’ll blame the data.")
 
     question = st.text_input("Your question:")
 
