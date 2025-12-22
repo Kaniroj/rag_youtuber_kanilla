@@ -1,20 +1,23 @@
-import streamlit as st
-import requests
 import os
+import requests
+import streamlit as st
 from dotenv import load_dotenv
- 
-load_dotenv()
-API_URL = "http://127.0.0.1:8000/rag/query"
-# اگر Azure Functions:
 
-#API_URL = f"https://kanilla-azure.azurewebsites.net/rag/query?code={os.getenv('FUNCTION_CODE')}"
+load_dotenv()
+
+DEFAULT_LOCAL = "http://localhost:7071/api/rag/query"
+DEFAULT_AZURE = "https://kanilla-azure.azurewebsites.net/api/rag/query"
+
+API_URL = os.getenv("KANILLA_API_URL") or DEFAULT_LOCAL
+
+st.set_page_config(page_title="Kanilla RAG", page_icon="🧠")
 
 
 def layout():
     st.title("🤓 Experimental Data Engineering — if it breaks, it was the data’s fault")
-    st.write("Ask here — we’ll blame the data.")
+    st.caption(f"API: {API_URL}")
 
-    question = st.text_input("Your question:")
+    question = st.text_input("Your question (English):")
 
     if st.button("Send") and question.strip():
         with st.spinner("Thinking..."):
@@ -32,19 +35,8 @@ def layout():
 
                 data = response.json()
 
-                st.subheader("Question")
-                st.write(question)
-
                 st.subheader("Answer")
                 st.write(data.get("answer", "No answer returned"))
-
-                sources = data.get("sources", [])
-                if sources:
-                    st.subheader("Sources")
-                    for s in sources:
-                        st.write(
-                            f"- {s['source_file']} (chunk {s['chunk_index']})"
-                        )
 
             except Exception as e:
                 st.error("Request failed")

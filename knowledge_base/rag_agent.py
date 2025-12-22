@@ -32,19 +32,23 @@ agent = Agent(
 
 
 async def answer_question(question: str, k: int = 5) -> str:
-    # 1. Retrieve chunks
+    # 1) Retrieve chunks
     chunks: List[RetrievedChunk] = retrieve(question, k=k)
 
-    # 2. Build context
+    # 1.5) Safety gate: if retrieval fails, don't hallucinate
+    if not chunks:
+        return "I don't know based on the transcripts."
+
+    # 2) Build context
     context = format_context(chunks)
 
-    # 3. Sources
+    # 3) Sources
     sources_text = "\n".join(
         f"- ({c.source_file}, chunk {c.chunk_index})"
         for c in chunks
     )
 
-    # 4. Prompt
+    # 4) Prompt
     prompt = f"""
 TRANSCRIPT CONTEXT:
 {context}
@@ -53,12 +57,11 @@ USER QUESTION:
 {question}
 
 Answer the question using the context above.
+If the context is insufficient, say you don't know based on the transcripts.
 At the end of your answer, include a section called "Sources" and list:
 {sources_text}
 """.strip()
 
-    # 5. Run agent
+    # 5) Run agent
     result = await agent.run(prompt)
-
-    # ✅ THIS IS THE FIX
     return result.output

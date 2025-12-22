@@ -242,5 +242,5 @@ obj/
 .env
 *.env
 .venv/
-
+local.settings.json
 
