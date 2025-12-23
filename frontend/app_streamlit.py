@@ -6,9 +6,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DEFAULT_LOCAL = "http://localhost:7071/api/rag/query"
-DEFAULT_AZURE = "https://kanilla-azure.azurewebsites.net/api/rag/query"
+DEFAULT_AZURE = "https://kokchun-azure.azurewebsites.net/api/rag/query"
 
-API_URL = os.getenv("KANILLA_API_URL") or DEFAULT_LOCAL
+API_URL = os.getenv("KANILLA_API_URL") or DEFAULT_AZURE
 
 st.set_page_config(page_title="Kanilla RAG", page_icon="🧠")
 
