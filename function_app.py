@@ -3,70 +3,63 @@ import logging
 import azure.functions as func
 from azure.functions import AsgiMiddleware
 
-# FastAPI app شما
+# Import FastAPI app (måste funka i Azure, annars indexeras 0 functions)
 from knowledge_base.api import app as fastapi_app
 
 
-# -----------------------------
-# Azure Function App
-# -----------------------------
-# پیش‌فرض را امن‌تر می‌گذاریم: FUNCTION
-# (یعنی همه‌ی routeها به کلید Function نیاز دارند مگر اینکه جداگانه Anonymous تعریف شوند)
+# ------------------------------------------------------------
+# Azure Function App (Python v2 programming model)
+# ------------------------------------------------------------
+# Default auth: FUNCTION (kräver function key)
 app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
 
-# Middleware را یک‌بار می‌سازیم تا هر درخواست دوباره instantiate نشود
+# Skapa middleware en gång (inte per request)
 asgi = AsgiMiddleware(fastapi_app)
 
 
-# -----------------------------
-# FastAPI proxy (بهتر: روی یک prefix)
-# -----------------------------
-# برای جلوگیری از تداخل با routeهای دیگر، catch-all را روی api/ می‌گذاریم
+# ------------------------------------------------------------
+# Proxy ALLT under /api/* till FastAPI
+# ------------------------------------------------------------
+# OBS: Azure Functions lägger redan på prefixet "/api/" i URL:en,
+# därför ska route INTE börja med "api/" här.
+#
+# Extern URL:  /api/rag/query  -> route="{*path}" får path="rag/query"
 @app.route(
-    route="api/{*path}",
+    route="{*path}",
     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    auth_level=func.AuthLevel.FUNCTION,  # صریح و واضح
+    auth_level=func.AuthLevel.FUNCTION,
 )
 async def fastapi_proxy(req: func.HttpRequest, context: func.Context) -> func.HttpResponse:
-    """
-    Proxy all HTTP requests under /api/* to the FastAPI application.
-    """
     return await asgi.handle_async(req, context)
 
 
-# -----------------------------
-# A simple test endpoint
-# -----------------------------
-@app.route(route="kanilla_azure", auth_level=func.AuthLevel.FUNCTION, methods=["GET", "POST"])
-def kanilla_azure(req: func.HttpRequest) -> func.HttpResponse:
-    logging.info("Python HTTP trigger function processed a request.")
+# ------------------------------------------------------------
+# Enkel test-endpoint (bra för att testa att indexing funkar)
+# ------------------------------------------------------------
+@app.route(route="kokchun-azure", methods=["GET", "POST"], auth_level=func.AuthLevel.FUNCTION)
+def kokchun_azure(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info("kokchun-azure called")
 
     name = req.params.get("name")
     if not name:
         try:
-            req_body = req.get_json()
-            name = (req_body or {}).get("name")
+            body = req.get_json()
+            name = (body or {}).get("name")
         except ValueError:
             name = None
 
     if name:
-        return func.HttpResponse(
-            f"Hello, {name}. This HTTP triggered function executed successfully.",
-            status_code=200,
-        )
+        return func.HttpResponse(f"Hello, {name}.", status_code=200)
 
     return func.HttpResponse(
-        "This HTTP triggered function executed successfully. "
-        "Pass a name in the query string or in the request body for a personalized response.",
+        "OK. Pass ?name=... or JSON {'name': '...'}",
         status_code=200,
     )
 
 
-# -----------------------------
-# Optional: a public health check
-# -----------------------------
-# اگر واقعاً لازم داری یک endpoint عمومی داشته باشی (برای health probe)، این را باز کن:
-#
-# @app.route(route="health", auth_level=func.AuthLevel.ANONYMOUS, methods=["GET"])
+# ------------------------------------------------------------
+# (Valfritt) Public health check utan key
+# ------------------------------------------------------------
+# @app.route(route="health", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
 # def health(req: func.HttpRequest) -> func.HttpResponse:
 #     return func.HttpResponse("ok", status_code=200)
