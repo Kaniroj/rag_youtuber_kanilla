@@ -3,39 +3,51 @@ import requests
 import streamlit as st
 from dotenv import load_dotenv
 
+# Load environment variables from .env (if present)
 load_dotenv()
 
-DEFAULT_LOCAL = "http://localhost:7071/api/rag/query"
-DEFAULT_AZURE = "https://datatalks-ai-function.azurewebsites.net/api/rag/query"
+# Toggle: set True to use local Functions host, False to use Azure
+#lockal
+#USE_LOCAL = True
+USE_LOCAL = False
+# Default endpoints (match your Swagger: POST /rag/query)
+DEFAULT_LOCAL = "http://localhost:7071/rag/query"
+DEFAULT_AZURE = "https://datatalks-ai-function.azurewebsites.net/rag/query"
 
-API_URL = os.getenv("KANILLA_API_URL") or DEFAULT_AZURE
-FUNCTION_KEY = os.getenv("KANILLA_FUNCTION_KEY")  # optional
+# Choose base URL:
+# 1) Start from defaults (local vs azure)
+# 2) Allow override via .env: KANILLA_API_URL
+API_URL = DEFAULT_LOCAL if USE_LOCAL else DEFAULT_AZURE
+API_URL = os.getenv("KANILLA_API_URL", API_URL)
 
-st.set_page_config(page_title="Kanilla RAG", page_icon="🧠")
+# Optional: Azure Functions key (Host key 'default')
+FUNCTION_KEY = os.getenv("KANILLA_FUNCTION_KEY")
+
+st.set_page_config(page_title="datatalks-rg", page_icon="🧠")
+
 
 def post_rag(prompt: str) -> requests.Response:
-    url = API_URL
     headers = {"Content-Type": "application/json"}
 
-    # If your function auth requires a key:
-    # Option A: query param ?code=...
+    # If auth_level=FUNCTION in Azure, you need the key:
+    # it can be passed as query param ?code=...
     params = {"code": FUNCTION_KEY} if FUNCTION_KEY else None
 
-    # Option B (alternative): header key (uncomment if you prefer)
-    # if FUNCTION_KEY:
-    #     headers["x-functions-key"] = FUNCTION_KEY
-
     return requests.post(
-        url,
-        json={"prompt": prompt},
+        API_URL,
+        json={"prompt": prompt},  # matches OpenAPI schema: Prompt(prompt: str)
         headers=headers,
         params=params,
-        timeout=120,  # RAG can be slow
+        timeout=120,
     )
+
 
 def layout():
     st.title("🤓 Experimental Data Engineering — if it breaks, it was the data’s fault")
+
+    # Debug info so you always know what you're calling
     st.caption(f"API: {API_URL}")
+    #st.caption(f"Has key: {bool(FUNCTION_KEY)} | USE_LOCAL: {USE_LOCAL}")
 
     question = st.text_input("Your question (English):")
 
@@ -49,7 +61,6 @@ def layout():
                     st.code(response.text[:4000])
                     return
 
-                # Safer JSON parsing
                 try:
                     data = response.json()
                 except ValueError:
@@ -65,6 +76,7 @@ def layout():
             except Exception as e:
                 st.error("Request failed")
                 st.exception(e)
+
 
 if __name__ == "__main__":
     layout()
